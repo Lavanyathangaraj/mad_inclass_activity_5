@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -35,6 +36,29 @@ class _MyHomePageState extends State<MyHomePage> {
   int hungerLevel = 50;
   final TextEditingController _nameController = TextEditingController();
   bool _nameSet = false;
+
+  Timer? _hungerTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _hungerTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      setState(() {
+        hungerLevel += 5;
+        if (hungerLevel > 100) {
+          hungerLevel = 100;
+          happinessLevel -= 20;
+          if (happinessLevel < 0) happinessLevel = 0;
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _hungerTimer?.cancel();
+    super.dispose();
+  }
 
   Color getPetOverlayColor() {
     if (happinessLevel > 70) {
@@ -145,8 +169,8 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             Image.asset(
               'assets/images/dog.jpeg',
-              height: 350,
-              width: 500,
+              height: 150,
+              width: 150,
               color: getPetOverlayColor(),
               colorBlendMode: BlendMode.modulate,
             ),
