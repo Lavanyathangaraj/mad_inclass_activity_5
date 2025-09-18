@@ -34,9 +34,20 @@ class _MyHomePageState extends State<MyHomePage> {
   int happinessLevel = 50;
   int hungerLevel = 50;
 
+  Color getPetOverlayColor() {
+    if (happinessLevel > 70) {
+      return Colors.green.withOpacity(0.5);
+    } else if (happinessLevel >= 30) {
+      return Colors.yellow.withOpacity(0.5);
+    } else {
+      return Colors.red.withOpacity(0.5);
+    }
+  }
+
   void _playWithPet() {
     setState(() {
       happinessLevel += 10;
+      if (happinessLevel > 100) happinessLevel = 100;
       _updateHunger();
     });
   }
@@ -44,6 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _feedPet() {
     setState(() {
       hungerLevel -= 10;
+      if (hungerLevel < 0) hungerLevel = 0;
       _updateHappiness();
     });
   }
@@ -51,19 +63,20 @@ class _MyHomePageState extends State<MyHomePage> {
   void _updateHappiness() {
     if (hungerLevel < 30) {
       happinessLevel -= 20;
+      if (happinessLevel < 0) happinessLevel = 0;
     } else {
       happinessLevel += 10;
+      if (happinessLevel > 100) happinessLevel = 100;
     }
   }
 
   void _updateHunger() {
-    setState(() {
-      hungerLevel += 5;
-      if (hungerLevel > 100) {
-        hungerLevel = 100;
-        happinessLevel -= 20;
-      }
-    });
+    hungerLevel += 5;
+    if (hungerLevel > 100) {
+      hungerLevel = 100;
+      happinessLevel -= 20;
+      if (happinessLevel < 0) happinessLevel = 0;
+    }
   }
 
   @override
@@ -72,41 +85,46 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Image.asset(
-              'assets/images/dog.jpeg',
-              height: 200,
-              width: 200,
-            ),
-            const SizedBox(height: 20.0),
-            Text(
-              'Name: $petName',
-              style: const TextStyle(fontSize: 20.0),
-            ),
-            const SizedBox(height: 16.0),
-            Text(
-              'Happiness Level: $happinessLevel',
-              style: const TextStyle(fontSize: 20.0),
-            ),
-            const SizedBox(height: 16.0),
-            Text(
-              'Hunger Level: $hungerLevel',
-              style: const TextStyle(fontSize: 20.0),
-            ),
-            const SizedBox(height: 32.0),
-            ElevatedButton(
-              onPressed: _playWithPet,
-              child: const Text('Play with Your Pet'),
-            ),
-            const SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: _feedPet,
-              child: const Text('Feed Your Pet'),
-            ),
-          ],
+      body: Container(
+        color: Colors.white,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Image.asset(
+                'assets/images/dog.jpeg',
+                height: 350,
+                width: 650,
+                color: getPetOverlayColor(),
+                colorBlendMode: BlendMode.modulate,
+              ),
+              const SizedBox(height: 20.0),
+              Text(
+                'Name: $petName',
+                style: const TextStyle(fontSize: 20.0),
+              ),
+              const SizedBox(height: 16.0),
+              Text(
+                'Happiness Level: $happinessLevel',
+                style: const TextStyle(fontSize: 20.0),
+              ),
+              const SizedBox(height: 16.0),
+              Text(
+                'Hunger Level: $hungerLevel',
+                style: const TextStyle(fontSize: 20.0),
+              ),
+              const SizedBox(height: 32.0),
+              ElevatedButton(
+                onPressed: _playWithPet,
+                child: const Text('Play with Your Pet'),
+              ),
+              const SizedBox(height: 16.0),
+              ElevatedButton(
+                onPressed: _feedPet,
+                child: const Text('Feed Your Pet'),
+              ),
+            ],
+          ),
         ),
       ),
     );
