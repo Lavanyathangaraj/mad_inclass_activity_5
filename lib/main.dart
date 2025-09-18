@@ -76,6 +76,12 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            Image.asset(
+              'assets/images/dog.jpeg',
+              height: 200,
+              width: 200,
+            ),
+            const SizedBox(height: 20.0),
             Text(
               'Name: $petName',
               style: const TextStyle(fontSize: 20.0),
