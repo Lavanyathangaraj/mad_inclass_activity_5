@@ -34,6 +34,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String petName = "";
   int happinessLevel = 50;
   int hungerLevel = 50;
+  int _energyLevel = 100;
   final TextEditingController _nameController = TextEditingController();
   bool _nameSet = false;
 
@@ -49,11 +50,13 @@ class _MyHomePageState extends State<MyHomePage> {
       if (_gameEnded) return;
       setState(() {
         hungerLevel += 5;
+        _energyLevel -= 5;
         if (hungerLevel > 100) {
           hungerLevel = 100;
           happinessLevel -= 20;
           if (happinessLevel < 0) happinessLevel = 0;
         }
+        if (_energyLevel < 0) _energyLevel = 0;
         _checkWinLoss();
       });
     });
@@ -75,6 +78,13 @@ class _MyHomePageState extends State<MyHomePage> {
     return Colors.red.withOpacity(0.5);
   }
 
+  Color getEnergyBarColor() {
+    if (_energyLevel > 80) return Colors.greenAccent;
+    if (_energyLevel > 50) return Colors.lightBlueAccent;
+    if (_energyLevel > 30) return Colors.yellowAccent;
+    return Colors.redAccent;
+  }
+
   String getPetMood() {
     if (happinessLevel > 70) return "Happy 🤩";
     if (happinessLevel >= 30) return "Neutral 🙂";
@@ -85,7 +95,9 @@ class _MyHomePageState extends State<MyHomePage> {
     if (_gameEnded) return;
     setState(() {
       happinessLevel += 10;
+      _energyLevel -= 10;
       if (happinessLevel > 100) happinessLevel = 100;
+      if (_energyLevel < 0) _energyLevel = 0;
       _updateHunger();
       _checkWinLoss();
     });
@@ -95,6 +107,8 @@ class _MyHomePageState extends State<MyHomePage> {
     if (_gameEnded) return;
     setState(() {
       hungerLevel -= 10;
+      _energyLevel += 5;
+      if (_energyLevel > 100) _energyLevel = 100;
       if (hungerLevel < 0) hungerLevel = 0;
       _updateHappiness();
       _checkWinLoss();
@@ -133,17 +147,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _checkWinLoss() {
     if (_gameEnded) return;
-
     if (hungerLevel == 100 && happinessLevel <= 10) {
       _gameEnded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showEndDialog("Game Over!!");
+        _showEndDialog("Game Over");
       });
       _hungerTimer?.cancel();
       _winTimer?.cancel();
       return;
     }
-
     if (happinessLevel > 80) {
       if (!_winTimerStarted) {
         _winTimerStarted = true;
@@ -151,7 +163,7 @@ class _MyHomePageState extends State<MyHomePage> {
           if (!_gameEnded && happinessLevel > 80) {
             _gameEnded = true;
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _showEndDialog("You Won!!");
+              _showEndDialog("You Win!");
             });
             _hungerTimer?.cancel();
           }
@@ -205,7 +217,7 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: _setPetName,
-              child: const Text("Confirm Name"),
+              child: const Text("Submit"),
             ),
           ],
         ),
@@ -246,6 +258,20 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
               'Hunger Level: $hungerLevel',
               style: const TextStyle(fontSize: 20.0),
+            ),
+            const SizedBox(height: 16.0),
+            Text(
+              'Energy Level: $_energyLevel',
+              style: const TextStyle(fontSize: 20.0),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: LinearProgressIndicator(
+                value: _energyLevel / 100,
+                minHeight: 10,
+                backgroundColor: Colors.grey[300],
+                color: getEnergyBarColor(),
+              ),
             ),
             const SizedBox(height: 32.0),
             ElevatedButton(
