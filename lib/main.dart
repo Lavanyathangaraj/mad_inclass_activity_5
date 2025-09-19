@@ -13,9 +13,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Digital Pet',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-      ),
+      theme: ThemeData(primarySwatch: Colors.teal),
       home: const MyHomePage(title: 'Digital Pet'),
     );
   }
@@ -23,7 +21,6 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   final String title;
-
   const MyHomePage({super.key, required this.title});
 
   @override
@@ -34,41 +31,45 @@ class _MyHomePageState extends State<MyHomePage> {
   String petName = "";
   int happinessLevel = 50;
   int hungerLevel = 50;
-  int _energyLevel = 100;
+  int energyLevel = 100;
   final TextEditingController _nameController = TextEditingController();
-  bool _nameSet = false;
+  bool nameSet = false;
+  bool gameEnded = false;
 
-  Timer? _hungerTimer;
-  Timer? _winTimer;
-  bool _winTimerStarted = false;
-  bool _gameEnded = false;
+  Timer? hungerTimer;
+  DateTime? happinessAbove80Start;
+
+  final List<String> activities = ['Play', 'Feed', 'Train', 'Run', 'Sleep'];
+  String selectedActivity = 'Play';
 
   @override
   void initState() {
     super.initState();
-    _hungerTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      if (_gameEnded) return;
+    startHungerTimer();
+    WidgetsBinding.instance.addPostFrameCallback((_) => checkWinLoss());
+  }
+
+  void startHungerTimer() {
+    hungerTimer?.cancel();
+    hungerTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (gameEnded) return;
       setState(() {
         hungerLevel += 5;
-        _energyLevel -= 5;
+        energyLevel -= 5;
         if (hungerLevel > 100) {
           hungerLevel = 100;
           happinessLevel -= 20;
           if (happinessLevel < 0) happinessLevel = 0;
         }
-        if (_energyLevel < 0) _energyLevel = 0;
-        _checkWinLoss();
+        if (energyLevel < 0) energyLevel = 0;
+        checkWinLoss();
       });
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkWinLoss();
     });
   }
 
   @override
   void dispose() {
-    _hungerTimer?.cancel();
-    _winTimer?.cancel();
+    hungerTimer?.cancel();
     super.dispose();
   }
 
@@ -79,9 +80,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Color getEnergyBarColor() {
-    if (_energyLevel > 80) return Colors.greenAccent;
-    if (_energyLevel > 50) return Colors.lightBlueAccent;
-    if (_energyLevel > 30) return Colors.yellowAccent;
+    if (energyLevel > 80) return Colors.greenAccent;
+    if (energyLevel > 50) return Colors.lightBlueAccent;
+    if (energyLevel > 30) return Colors.yellowAccent;
     return Colors.redAccent;
   }
 
@@ -91,32 +92,50 @@ class _MyHomePageState extends State<MyHomePage> {
     return "Unhappy 😣";
   }
 
-  void _playWithPet() {
-    if (_gameEnded) return;
+  void performActivity(String activity) {
+    if (gameEnded) return;
     setState(() {
-      happinessLevel += 10;
-      _energyLevel -= 10;
+      switch (activity) {
+        case 'Play':
+          happinessLevel += 10;
+          energyLevel -= 10;
+          updateHunger();
+          break;
+        case 'Feed':
+          hungerLevel -= 10;
+          energyLevel += 5;
+          updateHappiness();
+          break;
+        case 'Train':
+          happinessLevel -= 5;
+          energyLevel -= 15;
+          updateHunger();
+          break;
+        case 'Run':
+          happinessLevel += 5;
+          energyLevel -= 20;
+          updateHunger();
+          break;
+        case 'Sleep':
+          energyLevel += 30;
+          if (energyLevel > 100) energyLevel = 100;
+          hungerLevel += 10;
+          if (hungerLevel > 100) hungerLevel = 100;
+          break;
+      }
+
       if (happinessLevel > 100) happinessLevel = 100;
-      if (_energyLevel < 0) _energyLevel = 0;
-      _updateHunger();
-      _checkWinLoss();
-    });
-  }
-
-  void _feedPet() {
-    if (_gameEnded) return;
-    setState(() {
-      hungerLevel -= 10;
-      _energyLevel += 5;
-      if (_energyLevel > 100) _energyLevel = 100;
+      if (happinessLevel < 0) happinessLevel = 0;
+      if (energyLevel < 0) energyLevel = 0;
       if (hungerLevel < 0) hungerLevel = 0;
-      _updateHappiness();
-      _checkWinLoss();
+      if (hungerLevel > 100) hungerLevel = 100;
+
+      checkWinLoss();
     });
   }
 
-  void _updateHappiness() {
-    if (_gameEnded) return;
+  void updateHappiness() {
+    if (gameEnded) return;
     if (hungerLevel < 30) {
       happinessLevel -= 20;
       if (happinessLevel < 0) happinessLevel = 0;
@@ -126,8 +145,8 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _updateHunger() {
-    if (_gameEnded) return;
+  void updateHunger() {
+    if (gameEnded) return;
     hungerLevel += 5;
     if (hungerLevel > 100) {
       hungerLevel = 100;
@@ -136,155 +155,163 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _setPetName() {
+  void setPetName() {
     if (_nameController.text.isNotEmpty) {
       setState(() {
         petName = _nameController.text;
-        _nameSet = true;
+        nameSet = true;
       });
     }
   }
 
-  void _checkWinLoss() {
-    if (_gameEnded) return;
+  void checkWinLoss() {
+    if (gameEnded) return;
+
     if (hungerLevel == 100 && happinessLevel <= 10) {
-      _gameEnded = true;
+      gameEnded = true;
+      hungerTimer?.cancel();
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showEndDialog("Game Over");
+        showEndDialog("Game Over!!!");
       });
-      _hungerTimer?.cancel();
-      _winTimer?.cancel();
       return;
     }
+
     if (happinessLevel > 80) {
-      if (!_winTimerStarted) {
-        _winTimerStarted = true;
-        _winTimer = Timer(const Duration(minutes: 3), () {
-          if (!_gameEnded && happinessLevel > 80) {
-            _gameEnded = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _showEndDialog("You Win!");
-            });
-            _hungerTimer?.cancel();
-          }
-        });
+      if (happinessAbove80Start == null) {
+        happinessAbove80Start = DateTime.now();
+      } else {
+        final elapsed = DateTime.now().difference(happinessAbove80Start!).inSeconds;
+        if (elapsed >= 90) {
+          gameEnded = true;
+          hungerTimer?.cancel();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showEndDialog("You Won!!!");
+          });
+        }
       }
     } else {
-      _winTimerStarted = false;
-      _winTimer?.cancel();
+      happinessAbove80Start = null;
     }
   }
 
-  void _showEndDialog(String title) {
+  void showEndDialog(String title) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         title: Text(title),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              resetGame();
+            },
+            child: const Text("Restart Game"),
+          ),
+        ],
       ),
     );
+  }
+
+  void resetGame() {
+    setState(() {
+      petName = "";
+      nameSet = false;
+      happinessLevel = 50;
+      hungerLevel = 50;
+      energyLevel = 100;
+      selectedActivity = 'Play';
+      gameEnded = false;
+      happinessAbove80Start = null;
+      hungerTimer?.cancel();
+      startHungerTimer();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: _nameSet ? _buildPetScreen() : _buildNameInputScreen(),
+      appBar: AppBar(title: Text(widget.title)),
+      body: nameSet ? buildPetScreen() : buildNameInputScreen(),
     );
   }
 
-  Widget _buildNameInputScreen() {
+  Widget buildNameInputScreen() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "Enter your pet's name:",
-              style: TextStyle(fontSize: 20.0),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Text("Enter your pet's name:", style: TextStyle(fontSize: 20.0)),
+          const SizedBox(height: 16.0),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: "Pet Name",
             ),
-            const SizedBox(height: 16.0),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: "Pet Name",
-              ),
-            ),
-            const SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: _setPetName,
-              child: const Text("Submit"),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16.0),
+          ElevatedButton(onPressed: setPetName, child: const Text("Submit")),
+        ]),
       ),
     );
   }
 
-  Widget _buildPetScreen() {
+  Widget buildPetScreen() {
     return Container(
-      color: Colors.white,
+      color: const Color(0xFFE0F7FA),
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Image.asset(
-              'assets/images/dog.jpeg',
-              height: 250,
-              width: 450,
-              color: getPetOverlayColor(),
-              colorBlendMode: BlendMode.modulate,
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text('Name: $petName', style: const TextStyle(fontSize: 20.0)),
+          const SizedBox(height: 8.0),
+          Text('Mood: ${getPetMood()}', style: const TextStyle(fontSize: 20.0)),
+          const SizedBox(height: 16.0),
+          Image.asset(
+            'assets/images/dog.jpeg',
+            height: 250,
+            width: 450,
+            color: getPetOverlayColor(),
+            colorBlendMode: BlendMode.modulate,
+          ),
+          const SizedBox(height: 16.0),
+          Text('Happiness Level: $happinessLevel', style: const TextStyle(fontSize: 20.0)),
+          const SizedBox(height: 16.0),
+          Text('Hunger Level: $hungerLevel', style: const TextStyle(fontSize: 20.0)),
+          const SizedBox(height: 16.0),
+          Text('Energy Level: $energyLevel', style: const TextStyle(fontSize: 20.0)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40.0),
+            child: LinearProgressIndicator(
+              value: energyLevel / 100,
+              minHeight: 10,
+              backgroundColor: Colors.grey[300],
+              color: getEnergyBarColor(),
             ),
-            const SizedBox(height: 20.0),
-            Text(
-              'Name: $petName',
-              style: const TextStyle(fontSize: 20.0),
+          ),
+          const SizedBox(height: 32.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40.0),
+            child: DropdownButton<String>(
+              value: selectedActivity,
+              isExpanded: true,
+              onChanged: (String? value) {
+                if (value != null) selectedActivity = value;
+                setState(() {});
+              },
+              items: activities.map((String activity) {
+                return DropdownMenuItem<String>(
+                  value: activity,
+                  child: Text(activity),
+                );
+              }).toList(),
             ),
-            const SizedBox(height: 8.0),
-            Text(
-              'Mood: ${getPetMood()}',
-              style: const TextStyle(fontSize: 20.0),
-            ),
-            const SizedBox(height: 16.0),
-            Text(
-              'Happiness Level: $happinessLevel',
-              style: const TextStyle(fontSize: 20.0),
-            ),
-            const SizedBox(height: 16.0),
-            Text(
-              'Hunger Level: $hungerLevel',
-              style: const TextStyle(fontSize: 20.0),
-            ),
-            const SizedBox(height: 16.0),
-            Text(
-              'Energy Level: $_energyLevel',
-              style: const TextStyle(fontSize: 20.0),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0),
-              child: LinearProgressIndicator(
-                value: _energyLevel / 100,
-                minHeight: 10,
-                backgroundColor: Colors.grey[300],
-                color: getEnergyBarColor(),
-              ),
-            ),
-            const SizedBox(height: 32.0),
-            ElevatedButton(
-              onPressed: _playWithPet,
-              child: const Text('Play with Your Pet'),
-            ),
-            const SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: _feedPet,
-              child: const Text('Feed Your Pet'),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16.0),
+          ElevatedButton(
+            onPressed: () => performActivity(selectedActivity),
+            child: const Text('Perform Activity'),
+          ),
+        ]),
       ),
     );
   }
